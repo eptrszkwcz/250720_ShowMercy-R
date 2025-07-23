@@ -44,26 +44,6 @@ function parseLatLon(coordStr) {
   };
 }
 
-
-// Function to parse DMS to decimal
-function parseDMS(dmsStr) {
-  const regex = /(\d+)°(\d+)'([\d.]+)"?([NSEW])/g;
-  let match, coords = [];
-
-  while ((match = regex.exec(dmsStr)) !== null) {
-    let d = parseFloat(match[1]);
-    let m = parseFloat(match[2]);
-    let s = parseFloat(match[3]);
-    let dir = match[4];
-
-    let decimal = d + m / 60 + s / 3600;
-    if (dir === 'S' || dir === 'W') decimal *= -1;
-    coords.push(decimal);
-  }
-
-  return coords.length === 2 ? { lat: coords[0], lon: coords[1] } : null;
-}
-
 // Load data from Google Sheets
 const sheetId = '1FSpa8GXKtsxHiAHDRAkum0DGJJs4IAhDhevDrLkh9Bs';
 const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
@@ -79,6 +59,7 @@ fetch(sheetUrl)
     const dateIdx = headers.indexOf('Date Completed');
 
     geojsonData.features = []; // Reset in case of reload
+    let idCounter = 0;
 
     for (let row of rows) {
       const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
@@ -86,11 +67,15 @@ fetch(sheetUrl)
 
       const values = matches.map(val => val.replace(/^"|"$/g, '').trim());
       const coordStr = values[coordIdx];
-      const { lat, lon } = parseLatLon(coordStr)
-      if (!lat) continue;
+
+      const latLon = parseLatLon(coordStr);
+      if (!latLon || !latLon.lat || !latLon.lon) continue;
+
+      const { lat, lon } = latLon;
 
       geojsonData.features.push({
         type: 'Feature',
+        id: `point-${idCounter++}`,
         geometry: {
           type: 'Point',
           coordinates: [lon, lat]
@@ -106,6 +91,57 @@ fetch(sheetUrl)
       map.getSource('points').setData(geojsonData);
     }
   });
+  
+// fetch(sheetUrl)
+//   .then(res => res.text())
+//   .then(csv => {
+//     const rows = csv.trim().split('\n');
+//     const headers = rows.shift().split(',').map(h => h.replace(/^"|"$/g, '').trim());
+  
+//     const coordIdx = headers.indexOf('Coords');
+//     const regionIdx = headers.indexOf('Region');
+//     const dateIdx = headers.indexOf('Date Completed');
+  
+//     geojsonData.features = []; // Reset in case of reload
+  
+//     let idCounter = 0;
+  
+//     for (let row of rows) {
+//       const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+//       if (!matches || matches.length !== headers.length) continue;
+  
+//       const values = matches.map(val => val.replace(/^"|"$/g, '').trim());
+//       const coordStr = values[coordIdx];
+      
+//       let latLon;
+//       try {
+//         latLon = parseLatLon(coordStr);
+//       } catch (e) {
+//         continue; // Skip malformed coordinates
+//       }
+  
+//       const { lat, lon } = latLon;
+
+//       if (!lat || !lon) continue;
+  
+//       geojsonData.features.push({
+//         type: 'Feature',
+//         id: `point-${idCounter++}`,  // <-- add this line
+//         geometry: {
+//           type: 'Point',
+//           coordinates: [lon, lat]
+//         },
+//         properties: {
+//           region: values[regionIdx],
+//           date: values[dateIdx]
+//         }
+//       });
+//     }
+  
+//     if (map.getSource('points')) {
+//       map.getSource('points').setData(geojsonData);
+//     }
+// });
 
 // Add layer when the map loads
 map.on('load', () => {
@@ -117,15 +153,20 @@ map.on('load', () => {
     clusterMaxZoom: 14, // Max zoom to cluster points
     clusterRadius: 40   // Radius of each cluster in pixels
   });
-  
-  // Cluster circles
+
+    // Cluster circles
   map.addLayer({
     id: 'clusters',
     type: 'circle',
     source: 'points',
     filter: ['has', 'point_count'],
     paint: {
-      'circle-color': '#1079BF',
+      'circle-color': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        '#0099FF', // 💙 Hover color
+        '#1079BF'  // Default color
+      ],
       'circle-radius': [
         'step',
         ['get', 'point_count'],
@@ -155,8 +196,6 @@ map.on('load', () => {
     }
   });
   
-
-  
   // Shadow for unclustered points
   map.addLayer({
     id: 'point-shadow',
@@ -179,95 +218,22 @@ map.on('load', () => {
     filter: ['!', ['has', 'point_count']],
     paint: {
       'circle-radius': 6,
-      'circle-color': '#1079BF',
+      'circle-color': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        '#0099FF', // 💙 Hover color
+        '#1079BF'  // Default color
+      ],
       'circle-opacity': 0.8,
       'circle-stroke-width': 1,
       'circle-stroke-color': '#fff'
     }
   });
 
-  // HOVER FUNCTIONALITY
-
-  // map.addLayer({
-  //   id: 'cluster-hov',
-  //   type: 'circle',
-  //   source: 'points',
-  //   filter: ['has', 'point_count'],
-  //   paint: {
-  //     'circle-color': [
-  //       'case',
-  //       ['boolean', ['feature-state', 'hover'], false],
-  //       '#ADD8E6', // light blue on hover
-  //       '#ff7f50'  // default coral color (or whatever your default is)
-  //     ],
-  //     'circle-radius': [
-  //       'step',
-  //       ['get', 'point_count'],
-  //       20,
-  //       10,
-  //       30,
-  //       30,
-  //       40
-  //     ],
-  //     'circle-opacity': 0.8
-  //   }
-  // });
-  
-  // map.addLayer({
-  //   id: 'unclustered-point-hov',
-  //   type: 'circle',
-  //   source: 'points',
-  //   filter: ['!', ['has', 'point_count']],
-  //   paint: {
-  //     'circle-color': [
-  //       'case',
-  //       ['boolean', ['feature-state', 'hover'], false],
-  //       '#ADD8E6', // light blue on hover
-  //       '#4169e1'  // default royal blue
-  //     ],
-  //     'circle-radius': 6,
-  //     'circle-opacity': 0.8,
-  //     'circle-stroke-width': 1,
-  //     'circle-stroke-color': '#fff'
-  //   }
-  // });
-  
-  
-
-  // WITHOUT CLUSTERING
-  // map.addSource('points', {
-  //   type: 'geojson',
-  //   data: geojsonData, // initially empty
-  // });
-
-  // map.addLayer({
-  //   id: 'point-shadow',
-  //   type: 'circle',
-  //   source: 'points',
-  //   paint: {
-  //     'circle-radius': 8,
-  //     'circle-color': '#000000',
-  //     'circle-opacity': 0.3,
-  //     'circle-blur': 0.6
-  //   }
-  // });
-
-  // map.addLayer({
-  //   id: 'points',
-  //   type: 'circle',
-  //   source: 'points',
-  //   paint: {
-  //     'circle-radius': 6,
-  //     'circle-color': '#1079BF',
-  //     'circle-opacity': 0.8,
-  //     'circle-stroke-width': 1,
-  //     'circle-stroke-color': '#fff'
-  //   }
-  // });
 
   map.on('click', 'clusters', (e) => {
     const features = map.queryRenderedFeatures(e.point, {
-      layers: ['cluster']
+      layers: ['clusters']
     });
     const clusterId = features[0].properties.cluster_id;
     map.getSource('points').getClusterExpansionZoom(clusterId, (err, zoom) => {
@@ -306,45 +272,10 @@ map.on('load', () => {
 
   map.on('mouseenter', 'points', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'points', () => map.getCanvas().style.cursor = '');
+
+  map.on('mouseenter', 'clusters', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'clusters', () => map.getCanvas().style.cursor = '');
 });
 
-
-// let hoveredFeatureId = null;
-
-// // Hover on unclustered points
-// map.on('mousemove', 'unclustered-point', (e) => {
-//   if (e.features.length > 0) {
-//     if (hoveredFeatureId !== null) {
-//       map.setFeatureState({ source: 'points', id: hoveredFeatureId }, { hover: false });
-//     }
-//     hoveredFeatureId = e.features[0].id;
-//     map.setFeatureState({ source: 'points', id: hoveredFeatureId }, { hover: true });
-//   }
-// });
-
-// map.on('mouseleave', 'unclustered-point', () => {
-//   if (hoveredFeatureId !== null) {
-//     map.setFeatureState({ source: 'points', id: hoveredFeatureId }, { hover: false });
-//     hoveredFeatureId = null;
-//   }
-// });
-
-// // Hover on clusters
-// map.on('mousemove', 'clusters', (e) => {
-//   if (e.features.length > 0) {
-//     if (hoveredFeatureId !== null) {
-//       map.setFeatureState({ source: 'points', id: hoveredFeatureId }, { hover: false });
-//     }
-//     hoveredFeatureId = e.features[0].id;
-//     map.setFeatureState({ source: 'points', id: hoveredFeatureId }, { hover: true });
-//   }
-// });
-
-// map.on('mouseleave', 'clusters', () => {
-//   if (hoveredFeatureId !== null) {
-//     map.setFeatureState({ source: 'points', id: hoveredFeatureId }, { hover: false });
-//     hoveredFeatureId = null;
-//   }
-// });
 
 
