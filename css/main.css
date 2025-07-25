@@ -88,7 +88,8 @@ body {
 .mapboxgl-popup-content {
     font: var(--font_default);
     padding: 15px;
-    width: 300px;
+    display: inline-block;
+    /* width: 300px; */
     background: rgba(253,253,243,0.9);
     color: var(--sec_color);
     display: inline-block;
@@ -116,7 +117,7 @@ body {
 }
 
 .pop-country{
-    color: #898989;
+    color: #726767;
     margin-left: 8px;
     font-family: serif;
     margin-bottom: 1px;
@@ -130,16 +131,22 @@ body {
 }
 
 .pop-date-line{
-    color: #5f5f5f;
+    color: #726767;
     /* color: red; */
     display: flex;
     justify-content: left;
-    font-style: italic;
+    font-weight: 400;
+    /* font-style: italic; */
     /* margin-left: 30px; */
 }
 
 .pop-date{
     margin-left: 4px;
+}
+
+.pop-ID{
+    font-weight: bold;
+    font-style: normal;
 }
 
 .pop-date-spacer{
