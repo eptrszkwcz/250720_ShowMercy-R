@@ -2,7 +2,7 @@ mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNpdHVuOXpqMzAwMmEybnF2a
 
 const map = new mapboxgl.Map({
   container: 'map',
-  style: 'mapbox://styles/ptrszkwcz/cmd5h7xz9031i01rf79ux2nxy',
+  style: 'mapbox://styles/ptrszkwcz/cmd0f8osq00cb01sq3isz3osg',
   center:  [32.4, 1.3],
   zoom: 6.75
 }); 
@@ -57,6 +57,7 @@ fetch(sheetUrl)
     const coordIdx = headers.indexOf('Coords');
     const regionIdx = headers.indexOf('Region');
     const dateIdx = headers.indexOf('Date Completed');
+    const wellID = headers.indexOf('Water Well ID');
 
     geojsonData.features = []; // Reset in case of reload
     let idCounter = 0;
@@ -82,7 +83,8 @@ fetch(sheetUrl)
         },
         properties: {
           region: values[regionIdx],
-          date: values[dateIdx]
+          date: values[dateIdx],
+          wellID: values[wellID] || `Well ID -`,
         }
       });
     }
@@ -94,33 +96,31 @@ fetch(sheetUrl)
 
     // ADD MAP LAYERS INSIDE CSV FETCH 
 
-    // Add layer when the map loads
     map.on('load', () => {
-
+      // 1. Add the GeoJSON source (with promoteId so feature.id is usable)
       map.addSource('points', {
         type: 'geojson',
         data: geojsonData,
         cluster: true,
         clusterMaxZoom: 14,
         clusterRadius: 40,
-        promoteId: 'id',
+        promoteId: 'id'
       });
     
-      // … your existing clusters + cluster-count + point-shadow layers …
-    
-      // Unclustered individual points (with hover color = lime green)
+      // 2. Cluster circles
       map.addLayer({
-        id: 'points',
+        id: 'clusters',
         type: 'circle',
         source: 'points',
-        filter: ['!', ['has', 'point_count']],
+        filter: ['has', 'point_count'],
         paint: {
-          'circle-radius': 6,
-          'circle-color': [
-            'case',
-            ['boolean', ['feature-state', 'hover'], false],
-            'lime',       // hover color
-            '#1079BF'     // default color
+          'circle-color': '#1079BF',
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            15,   // radius when count < first step
+            100, 20,  // >=100 → radius 20
+            750, 25   // >=750 → radius 25
           ],
           'circle-opacity': 0.8,
           'circle-stroke-width': 1,
@@ -128,44 +128,7 @@ fetch(sheetUrl)
         }
       });
     
-      let hoveredFeatureId = null;
-
-      map.on('mousemove', 'points', (e) => {
-        // bail if no feature
-        if (!e.features.length || e.features[0].id == null) return;
-
-        // clear previous hover
-        if (hoveredFeatureId !== null) {
-          map.setFeatureState(
-            { source: 'points', id: hoveredFeatureId },
-            { hover: false }
-          );
-        }
-
-        // set new hover
-        hoveredFeatureId = e.features[0].id;
-        map.setFeatureState(
-          { source: 'points', id: hoveredFeatureId },
-          { hover: true }
-        );
-      });
-
-      map.on('mouseleave', 'points', () => {
-        if (hoveredFeatureId !== null) {
-          map.setFeatureState(
-            { source: 'points', id: hoveredFeatureId },
-            { hover: false }
-          );
-          hoveredFeatureId = null;
-        }
-        map.getCanvas().style.cursor = '';
-      });
-
-      map.on('mouseenter', 'points', () => {
-        map.getCanvas().style.cursor = 'pointer';
-      });
-
-      // CLUSTERS
+      // 3. Cluster count labels
       map.addLayer({
         id: 'cluster-count',
         type: 'symbol',
@@ -177,11 +140,11 @@ fetch(sheetUrl)
           'text-size': 12
         },
         paint: {
-          'text-color': '#ffffff',
+          'text-color': '#ffffff'
         }
       });
-      
-      // Shadow for unclustered points
+    
+      // 4. Shadow for individual (unclustered) points
       map.addLayer({
         id: 'point-shadow',
         type: 'circle',
@@ -189,78 +152,103 @@ fetch(sheetUrl)
         filter: ['!', ['has', 'point_count']],
         paint: {
           'circle-radius': 8,
-          'circle-color': '#000000',
+          'circle-color': '#000',
           'circle-opacity': 0.3,
           'circle-blur': 0.6
         }
       });
-
-      // // Unclustered individual points
-      // map.addLayer({
-      //   id: 'points',
-      //   type: 'circle',
-      //   source: 'points',
-      //   filter: ['!', ['has', 'point_count']],
-      //   paint: {
-      //     'circle-radius': 6,
-      //     'circle-color': [
-      //       'case',
-      //       ['boolean', ['feature-state', 'hover'], false],
-      //       '#0099FF', // 💙 Hover color
-      //       '#1079BF'  // Default color
-      //     ],
-      //     'circle-opacity': 0.8,
-      //     'circle-stroke-width': 1,
-      //     'circle-stroke-color': '#fff'
-      //   }
-      // });
-
-
+    
+      // 5. Unclustered points with hover-state styling
+      map.addLayer({
+        id: 'points',
+        type: 'circle',
+        source: 'points',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-radius': 6,
+          'circle-color': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            'lime',      // hover color
+            '#1079BF'    // default color
+          ],
+          'circle-opacity': 0.8,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff'
+        }
+      });
+    
+      // 6. Hover interaction
+      let hoveredId = null;
+    
+      // on mousemove over points → set hover state
+      map.on('mousemove', 'points', (e) => {
+        if (!e.features.length) return;
+    
+        // clear previous hover
+        if (hoveredId !== null) {
+          map.setFeatureState(
+            { source: 'points', id: hoveredId },
+            { hover: false }
+          );
+        }
+    
+        // set new hover
+        hoveredId = e.features[0].id;
+        map.setFeatureState(
+          { source: 'points', id: hoveredId },
+          { hover: true }
+        );
+    
+        map.getCanvas().style.cursor = 'pointer';
+      });
+    
+      // on leaving the points layer → clear hover state
+      map.on('mouseleave', 'points', () => {
+        if (hoveredId !== null) {
+          map.setFeatureState(
+            { source: 'points', id: hoveredId },
+            { hover: false }
+          );
+          hoveredId = null;
+        }
+        map.getCanvas().style.cursor = '';
+      });
+    
+      // 7. Click to expand clusters
       map.on('click', 'clusters', (e) => {
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: ['clusters']
-        });
-        const clusterId = features[0].properties.cluster_id;
-        map.getSource('points').getClusterExpansionZoom(clusterId, (err, zoom) => {
+        const feature = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })[0];
+        map.getSource('points').getClusterExpansionZoom(feature.properties.cluster_id, (err, zoom) => {
           if (err) return;
-      
-          map.easeTo({
-            center: features[0].geometry.coordinates,
-            zoom: zoom
-          });
+          map.easeTo({ center: feature.geometry.coordinates, zoom });
         });
       });
-
+    
+      // 8. Click on an individual point → popup
       map.on('click', 'points', (e) => {
         const props = e.features[0].properties;
-        const coordinates = e.features[0].geometry.coordinates.slice();
-        const popupContent = `
-          <div class = "pop-title">
-            <div class = "pop-region">${props.region}</div>
-            <div class = "pop-country">Uganda</div>
+        const coords = e.features[0].geometry.coordinates.slice();
+        const html = `
+          <div class="pop-title">
+            <div class="pop-region">${props.region}</div>
+            <div class="pop-country">Uganda</div>
             <div class="pop-flag">
-              <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag" />
+              <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag"/>
             </div>
           </div>
-
-          <div class = "pop-date-line">
-            <div class = "pop-completed">Completed</div>
-            <div class = "pop-date">${props.date}</div>
-            
+          <div class="pop-date-line">
+            <div class="pop-ID">${props.wellID}</div>
+          </div>
+          <div class="pop-date-line">
+            <div class="pop-completed">Completed</div>
+            <div class="pop-date">${props.date}</div>
           </div>
         `;
-        new mapboxgl.Popup()
-          .setLngLat(coordinates)
-          .setHTML(popupContent)
-          .addTo(map);
+        new mapboxgl.Popup().setLngLat(coords).setHTML(html).addTo(map);
       });
-
-      map.on('mouseenter', 'points', () => map.getCanvas().style.cursor = 'pointer');
-      map.on('mouseleave', 'points', () => map.getCanvas().style.cursor = '');
-
-      map.on('mouseenter', 'clusters', () => map.getCanvas().style.cursor = 'pointer');
-      map.on('mouseleave', 'clusters', () => map.getCanvas().style.cursor = '');
+    
     });
+    
 
 
 
