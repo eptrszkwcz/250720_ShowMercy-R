@@ -1,23 +1,35 @@
+// Mapbox GL JS Access Token
 mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNpdHVuOXpqMzAwMmEybnF2anZwbTd4aWcifQ.MF8M3qBg0AEp_-10FB4juw';
 
+// Initialize the map
 const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/ptrszkwcz/cmd0f8osq00cb01sq3isz3osg',
-  center:  [32.4, 1.3],
+  center: [32.4, 1.3], // Uganda center coordinates
   zoom: 6.75
 }); 
 
-// Prepare an empty GeoJSON object
+// Initialize empty GeoJSON data structure
 let geojsonData = {
   type: 'FeatureCollection',
   features: []
 };
 
+/**
+ * Parse DMS (Degrees, Minutes, Seconds) coordinate string to decimal degrees
+ * @param {string} coordStr - Coordinate string in DMS format (e.g., "1°30'45.6"N 32°15'30.2"E")
+ * @returns {Object|null} - Object with lat and lon properties, or null if parsing fails
+ */
 function parseLatLon(coordStr) {
-  // Step 1: Clean input string (remove all double quotes and normalize whitespace)
+  // Clean input string (remove extra quotes and normalize whitespace)
   const cleaned = coordStr.replace(/"+/g, '"').replace(/\s+/g, ' ').trim();
+  
+  // Skip empty strings
+  if (!cleaned || cleaned === '') {
+    return null;
+  }
 
-  // Step 2: Match DMS patterns
+  // Match DMS patterns: degrees°minutes'seconds"direction
   const regex = /(\d+)°(\d+)'([\d.]+)"([NSEW])/g;
   const coords = [];
   let match;
@@ -28,6 +40,7 @@ function parseLatLon(coordStr) {
     const seconds = parseFloat(match[3]);
     const direction = match[4];
 
+    // Convert DMS to decimal degrees
     let decimal = degrees + minutes / 60 + seconds / 3600;
     if (direction === 'S' || direction === 'W') decimal *= -1;
     coords.push(decimal);
@@ -44,37 +57,54 @@ function parseLatLon(coordStr) {
   };
 }
 
-// Load data from Google Sheets
+// Google Sheets configuration
 const sheetId = '1FSpa8GXKtsxHiAHDRAkum0DGJJs4IAhDhevDrLkh9Bs';
 const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
 
+// Fetch and process data from Google Sheets
 fetch(sheetUrl)
   .then(res => res.text())
   .then(csv => {
+    console.log('Google Sheets data received, CSV length:', csv.length);
+    
+    // Parse CSV data
     const rows = csv.trim().split('\n');
     const headers = rows.shift().split(',').map(h => h.replace(/^"|"$/g, '').trim());
 
+    // Find column indices
     const coordIdx = headers.indexOf('Coords');
     const regionIdx = headers.indexOf('Region');
     const dateIdx = headers.indexOf('Date Completed');
     const wellID = headers.indexOf('Water Well ID');
 
-    geojsonData.features = []; // Reset in case of reload
+    // Reset features array
+    geojsonData.features = [];
     let idCounter = 0;
 
+    // Process each row
     for (let row of rows) {
+      // Parse CSV row with proper quote handling
       const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
       if (!matches || matches.length !== headers.length) continue;
 
       const values = matches.map(val => val.replace(/^"|"$/g, '').trim());
       const coordStr = values[coordIdx];
 
+      // Parse coordinates
       const latLon = parseLatLon(coordStr);
-      if (!latLon || !latLon.lat || !latLon.lon) continue;
+      if (!latLon || !latLon.lat || !latLon.lon) {
+        continue;
+      }
 
       const { lat, lon } = latLon;
+      
+      // Check if coordinates are within reasonable bounds for Uganda
+      if (lat < -2 || lat > 5 || lon < 29 || lon > 35) {
+        continue;
+      }
 
-      geojsonData.features.push({
+      // Create GeoJSON feature
+      const feature = {
         type: 'Feature',
         id: `point-${idCounter++}`,
         geometry: {
@@ -86,172 +116,305 @@ fetch(sheetUrl)
           date: values[dateIdx],
           wellID: values[wellID] || `Well ID -`,
         }
-      });
+      };
+      
+      geojsonData.features.push(feature);
     }
+    
+    console.log('Total features processed:', geojsonData.features.length);
+    console.log('Features to be added to map:', geojsonData.features.length);
 
-    if (map.getSource('points')) {
-      map.getSource('points').setData(geojsonData);
-    }
-
-
-    // ADD MAP LAYERS INSIDE CSV FETCH 
-
-    map.on('load', () => {
-      // 1. Add the GeoJSON source (with promoteId so feature.id is usable)
-      map.addSource('points', {
-        type: 'geojson',
-        data: geojsonData,
-        cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 40,
-        promoteId: 'id'
-      });
-    
-      // 2. Cluster circles
-      map.addLayer({
-        id: 'clusters',
-        type: 'circle',
-        source: 'points',
-        filter: ['has', 'point_count'],
-        paint: {
-          'circle-color': '#1079BF',
-          'circle-radius': [
-            'step',
-            ['get', 'point_count'],
-            15,   // radius when count < first step
-            100, 20,  // >=100 → radius 20
-            750, 25   // >=750 → radius 25
-          ],
-          'circle-opacity': 0.8,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fff'
-        }
-      });
-    
-      // 3. Cluster count labels
-      map.addLayer({
-        id: 'cluster-count',
-        type: 'symbol',
-        source: 'points',
-        filter: ['has', 'point_count'],
-        layout: {
-          'text-field': '{point_count_abbreviated}',
-          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-          'text-size': 12
-        },
-        paint: {
-          'text-color': '#ffffff'
-        }
-      });
-    
-      // 4. Shadow for individual (unclustered) points
-      map.addLayer({
-        id: 'point-shadow',
-        type: 'circle',
-        source: 'points',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#000',
-          'circle-opacity': 0.3,
-          'circle-blur': 0.6
-        }
-      });
-    
-      // 5. Unclustered points with hover-state styling
-      map.addLayer({
-        id: 'points',
-        type: 'circle',
-        source: 'points',
-        filter: ['!', ['has', 'point_count']],
-        paint: {
-          'circle-radius': 6,
-          'circle-color': [
-            'case',
-            ['boolean', ['feature-state', 'hover'], false],
-            'lime',      // hover color
-            '#1079BF'    // default color
-          ],
-          'circle-opacity': 0.8,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fff'
-        }
-      });
-    
-      // 6. Hover interaction
-      let hoveredId = null;
-    
-      // on mousemove over points → set hover state
-      map.on('mousemove', 'points', (e) => {
-        if (!e.features.length) return;
-    
-        // clear previous hover
-        if (hoveredId !== null) {
-          map.setFeatureState(
-            { source: 'points', id: hoveredId },
-            { hover: false }
-          );
-        }
-    
-        // set new hover
-        hoveredId = e.features[0].id;
-        map.setFeatureState(
-          { source: 'points', id: hoveredId },
-          { hover: true }
-        );
-    
-        map.getCanvas().style.cursor = 'pointer';
-      });
-    
-      // on leaving the points layer → clear hover state
-      map.on('mouseleave', 'points', () => {
-        if (hoveredId !== null) {
-          map.setFeatureState(
-            { source: 'points', id: hoveredId },
-            { hover: false }
-          );
-          hoveredId = null;
-        }
-        map.getCanvas().style.cursor = '';
-      });
-    
-      // 7. Click to expand clusters
-      map.on('click', 'clusters', (e) => {
-        const feature = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })[0];
-        map.getSource('points').getClusterExpansionZoom(feature.properties.cluster_id, (err, zoom) => {
-          if (err) return;
-          map.easeTo({ center: feature.geometry.coordinates, zoom });
+    /**
+     * Add map layers and interactions
+     * This function sets up all the map layers including clusters, points, and hover effects
+     */
+    function addMapLayers() {
+      console.log('Adding map layers');
+      
+      // 1. Add the GeoJSON source with clustering enabled
+      if (!map.getSource('points')) {
+        map.addSource('points', {
+          type: 'geojson',
+          data: geojsonData,
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 40,
+          promoteId: 'id'
         });
+        
+        // Only add layers if they don't exist yet
+        if (!map.getLayer('clusters')) {
+      
+          // 2. Cluster circles (grouped points)
+          map.addLayer({
+            id: 'clusters',
+            type: 'circle',
+            source: 'points',
+            filter: ['has', 'point_count'],
+            paint: {
+              'circle-color': '#1079BF',
+              'circle-radius': [
+                'step',
+                ['get', 'point_count'],
+                15,   // radius when count < first step
+                100, 20,  // >=100 → radius 20
+                750, 25   // >=750 → radius 25
+              ],
+              'circle-opacity': 0.8,
+              'circle-stroke-width': 1,
+              'circle-stroke-color': '#fff'
+            }
+          });
+        
+          // 3. Cluster count labels
+          map.addLayer({
+            id: 'cluster-count',
+            type: 'symbol',
+            source: 'points',
+            filter: ['has', 'point_count'],
+            layout: {
+              'text-field': '{point_count_abbreviated}',
+              'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+              'text-size': 12
+            },
+            paint: {
+              'text-color': '#ffffff'
+            }
+          });
+        
+          // 4. Shadow for individual (unclustered) points
+          map.addLayer({
+            id: 'point-shadow',
+            type: 'circle',
+            source: 'points',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+              'circle-radius': 8,
+              'circle-color': '#000',
+              'circle-opacity': 0.3,
+              'circle-blur': 0.6
+            }
+          });
+        
+          // 5. Individual points (unclustered)
+          map.addLayer({
+            id: 'points',
+            type: 'circle',
+            source: 'points',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+              'circle-radius': 6,
+              'circle-color': '#1079BF',
+              'circle-opacity': 0.8,
+              'circle-stroke-width': 1,
+              'circle-stroke-color': '#fff'
+            }
+          });
+          
+          // 6. Hover layer for points (initially empty)
+          map.addSource('hover', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: []
+            }
+          });
+          
+          map.addLayer({
+            id: 'hover-points',
+            type: 'circle',
+            source: 'hover',
+            paint: {
+              'circle-radius': 6,
+              'circle-color': 'rgba(0, 0, 0, 0)',
+              'circle-opacity': 0.8,
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#0099ff'
+            }
+          });
+          
+          // 7. Hover layer for clusters (initially empty)
+          map.addSource('hover-clusters', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: []
+            }
+          });
+          
+          map.addLayer({
+            id: 'hover-clusters',
+            type: 'circle',
+            source: 'hover-clusters',
+            paint: {
+              'circle-color': 'rgba(0, 0, 0, 0)',
+              'circle-radius': [
+                'step',
+                ['get', 'point_count'],
+                15,   // radius when count < first step
+                100, 20,  // >=100 → radius 20
+                750, 25   // >=750 → radius 25
+              ],
+              'circle-opacity': 0.8,
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#0099ff'
+            }
+          });
+          
+          // 8. Hover cluster count labels
+          map.addLayer({
+            id: 'hover-cluster-count',
+            type: 'symbol',
+            source: 'hover-clusters',
+            layout: {
+              'text-field': '{point_count_abbreviated}',
+              'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+              'text-size': 12
+            },
+            paint: {
+              'text-color': '#ffffff'
+            }
+          });
+        
+          // 9. Hover interaction for individual points
+          let hoveredFeature = null;
+        
+          // On mousemove over points → show hover effect
+          map.on('mousemove', 'points', (e) => {
+            if (!e.features.length) return;
+            
+            const feature = e.features[0];
+            
+            // Try to get the feature ID from the original data
+            const featureId = feature.id;
+            
+            if (!featureId) {
+              // If no ID, try to find the feature in the original data by coordinates
+              const coords = feature.geometry.coordinates;
+              
+              const originalFeature = geojsonData.features.find(f => {
+                const origCoords = f.geometry.coordinates;
+                // Use approximate matching for floating point coordinates
+                const lonMatch = Math.abs(origCoords[0] - coords[0]) < 0.001;
+                const latMatch = Math.abs(origCoords[1] - coords[1]) < 0.001;
+                
+                return lonMatch && latMatch;
+              });
+              
+              if (originalFeature) {
+                hoveredFeature = originalFeature;
+              }
+            } else {
+              hoveredFeature = feature;
+            }
+            
+            if (hoveredFeature) {
+              // Add hover effect
+              map.getSource('hover').setData({
+                type: 'FeatureCollection',
+                features: [hoveredFeature]
+              });
+              
+              map.getCanvas().style.cursor = 'pointer';
+            }
+          });
+        
+          // On leaving the points layer → clear hover effect
+          map.on('mouseleave', 'points', () => {
+            // Clear hover effect
+            map.getSource('hover').setData({
+              type: 'FeatureCollection',
+              features: []
+            });
+            
+            hoveredFeature = null;
+            map.getCanvas().style.cursor = '';
+          });
+          
+          // 10. Hover interaction for clusters
+          let hoveredCluster = null;
+        
+          // On mousemove over clusters → show hover effect
+          map.on('mousemove', 'clusters', (e) => {
+            if (!e.features.length) return;
+            
+            const cluster = e.features[0];
+            hoveredCluster = cluster;
+            
+            // Add hover effect for cluster
+            map.getSource('hover-clusters').setData({
+              type: 'FeatureCollection',
+              features: [cluster]
+            });
+            
+            map.getCanvas().style.cursor = 'pointer';
+          });
+          
+          // On leaving the clusters layer → clear hover effect
+          map.on('mouseleave', 'clusters', () => {
+            // Clear hover effect
+            map.getSource('hover-clusters').setData({
+              type: 'FeatureCollection',
+              features: []
+            });
+            
+            hoveredCluster = null;
+            map.getCanvas().style.cursor = '';
+          });
+        
+          // 11. Click to expand clusters
+          map.on('click', 'clusters', (e) => {
+            const feature = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })[0];
+            map.getSource('points').getClusterExpansionZoom(feature.properties.cluster_id, (err, zoom) => {
+              if (err) return;
+              map.easeTo({ center: feature.geometry.coordinates, zoom });
+            });
+          });
+        
+          // 12. Click on individual points → show popup
+          map.on('click', 'points', (e) => {
+            const props = e.features[0].properties;
+            const coords = e.features[0].geometry.coordinates.slice();
+            const html = `
+              <div class="pop-title">
+                <div class="pop-region">${props.region}</div>
+                <div class="pop-country">Uganda</div>
+                <div class="pop-spacer"></div>
+                <div class="pop-flag">
+                  <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag"/>
+                </div>
+              </div>
+              <div class="pop-date-line">
+                <div class="pop-ID">${props.wellID}</div>
+              </div>
+              <div class="pop-date-line">
+                <div class="pop-completed">Completed</div>
+                <div class="pop-date">${props.date}</div>
+              </div>
+            `;
+            new mapboxgl.Popup().setLngLat(coords).setHTML(html).addTo(map);
+          });
+        
+        } // End of if (!map.getLayer('clusters'))
+      } else {
+        // Update existing source data
+        map.getSource('points').setData(geojsonData);
+      }
+    } // End of addMapLayers function
+    
+    // Initialize map layers after data is loaded
+    console.log('About to initialize map layers, map.isStyleLoaded():', map.isStyleLoaded());
+    if (map.isStyleLoaded()) {
+      console.log('Map is ready, calling addMapLayers');
+      addMapLayers();
+    } else {
+      console.log('Map not ready, waiting for load event');
+      map.once('load', () => {
+        console.log('Map loaded, calling addMapLayers');
+        addMapLayers();
       });
+    }
     
-      // 8. Click on an individual point → popup
-      map.on('click', 'points', (e) => {
-        const props = e.features[0].properties;
-        const coords = e.features[0].geometry.coordinates.slice();
-        const html = `
-          <div class="pop-title">
-            <div class="pop-region">${props.region}</div>
-            <div class="pop-country">Uganda</div>
-            <div class="pop-flag">
-              <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag"/>
-            </div>
-          </div>
-          <div class="pop-date-line">
-            <div class="pop-ID">${props.wellID}</div>
-          </div>
-          <div class="pop-date-line">
-            <div class="pop-completed">Completed</div>
-            <div class="pop-date">${props.date}</div>
-          </div>
-        `;
-        new mapboxgl.Popup().setLngLat(coords).setHTML(html).addTo(map);
-      });
-    
-    });
-    
-
-
-
   });
 
 
