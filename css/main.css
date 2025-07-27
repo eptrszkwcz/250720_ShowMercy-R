@@ -1,59 +1,90 @@
+/* ==========================================================================
+   ShowMercy Uganda Water Wells Map - Main Stylesheet
+   ========================================================================== */
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+/* Reset default margins and padding, set full height */
 html, body {
     margin: 0;
     padding: 0;
     height: 100%;
 }
 
+/* Main body styling with dark theme */
 body {
     display: flex;
     flex-direction: column;
-    background-color: #1D212D;
+    background-color: #1D212D; /* Dark blue-gray background */
     font-family: 'Open Sans', sans-serif;
     font-weight: 700;
 }
 
-.header{
+/* ==========================================================================
+   Header Section
+   ========================================================================== */
+
+/* Main header container */
+.header {
     height: 120px;
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    color: rgba(13, 220, 192, 0.5);
+    color: rgba(13, 220, 192, 0.5); /* Teal color with transparency */
     font-size: 20px;
     font-weight: 300;
 }
 
-.hl_text{
+/* Highlighted text within header */
+.hl_text {
     font-weight: 700;
-    color: rgba(13, 220, 192, 0.8);
+    color: rgba(13, 220, 192, 0.8); /* Brighter teal for emphasis */
 }
 
-    
-.app-container{
+/* ==========================================================================
+   Main Application Layout
+   ========================================================================== */
+
+/* Main application container - centers content */
+.app-container {
     flex: 1;
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    /* gap: 80px; */
+    /* gap: 80px; */ /* Uncomment to add spacing between map and controls */
 }
 
+/* ==========================================================================
+   Map Container
+   ========================================================================== */
+
+/* Container for the Mapbox map */
 .map-container {
     width: 600px;
     height: 600px;
-    /* border-radius: 20px; */
+    /* border-radius: 20px; */ /* Uncomment for rounded corners */
 }
 
+/* Mapbox GL JS map element */
 #map { 
     width: 100%;
     height: 100%;
-    /* border-radius: 20px; */
+    /* border-radius: 20px; */ /* Uncomment for rounded corners */
 }
 
+/* ==========================================================================
+   Control Panel
+   ========================================================================== */
+
+/* Right-side control panel */
 .control-panel {
     height: 600px;
     width: 600px;
-    /* background-color: pink; */
+    /* background-color: pink; */ /* Debug color - uncomment to see panel bounds */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -61,11 +92,16 @@ body {
     gap: 20px;
 }
 
+/* ==========================================================================
+   Download Button
+   ========================================================================== */
+
+/* Styled download button */
 .download-button {
     font: "Open Sans Medium";
-    background-color: #262b39; /* Green */
+    background-color: #262b39; /* Dark background */
     border: none;
-    color: #0ddcc0b0;
+    color: #0ddcc0b0; /* Teal text */
     padding: 15px 32px;
     text-align: center;
     text-decoration: none;
@@ -78,87 +114,125 @@ body {
     margin-left: 80px;
 }
 
+/* Download button hover state */
 .download-button:hover {
     /* background-color: #0ddcc0b0;
-    color: #262b39; */
-    border: 1px solid #0ddcc0;
-    color: #0ddcc0;
+    color: #262b39; */ /* Alternative hover effect */
+    border: 1px solid #0ddcc0; /* Teal border on hover */
+    color: #0ddcc0; /* Brighter teal text on hover */
 }
 
+/* ==========================================================================
+   Mapbox Popup Styling
+   ========================================================================== */
+
+/* Main popup content container */
 .mapboxgl-popup-content {
     font: var(--font_default);
     padding: 15px;
-    display: inline-block;
-    /* width: 300px; */
-    background: rgba(253,253,243,0.9);
+    display: block; /* Changed from inline-block to block */
+    width: fit-content; /* Size to fit all content */
+    /* min-width: 300px; Minimum width */
+    background: rgba(253,253,243,0.9); /* Light cream background with transparency */
     color: var(--sec_color);
-    display: inline-block;
     border-radius: 12px;
     font-size: 14px;
 }
 
+/* ==========================================================================
+   Popup Content Layout
+   ========================================================================== */
+
+/* Title section of popup */
 .pop-title {
     color: #303030;
     display: flex;
+    /* justify-content: space-between; Spread content across width */
     justify-content: left;
     align-items: flex-end;
-    /* align-items: bottom; */
+    /* align-items: bottom; */ /* Alternative alignment */
     margin-bottom: 6px;
     line-height: 1; 
     margin-right: 15px;
+    width: 100%; /* Ensure it takes full width */
+    min-width: 0; /* Allow shrinking */
 }
 
-.pop-region{
+/* Region name in popup */
+.pop-region {
     color: #303030;
     font-family: serif;
     font-size: 24px;
     font-weight: bold;
-    /* margin-left: 8px; */
+    /* margin-left: 8px; */ /* Uncomment for additional spacing */
 }
 
-.pop-country{
-    color: #726767;
-    margin-left: 8px;
+/* Country name in popup */
+.pop-country {
+    color: #726767; /* Gray text */
+    margin-left: 8px; /* 8px space from pop-region */
     font-family: serif;
     margin-bottom: 1px;
     font-size: 18px;
     font-weight: 100;
 }
 
-.pop-flag{
-    margin-left: 8px;
-    margin-bottom: 1px;
+.pop-spacer {
+    flex: 1;
 }
 
-.pop-date-line{
-    color: #726767;
-    /* color: red; */
+/* Flag image container in popup */
+.pop-flag {
+    margin-left: 16px; /* 16px minimum space from pop-country */
+    margin-right: 12px;
+    margin-bottom: 2px;
+    flex-shrink: 0; /* Prevent flag from shrinking */
+    display: flex; /* Ensure proper sizing */
+    align-items: flex-end; /* Align with text baseline */
+}
+
+/* ==========================================================================
+   Popup Data Lines
+   ========================================================================== */
+
+/* Container for date and ID information */
+.pop-date-line {
+    color: #726767; /* Gray text */
+    /* color: red; */ /* Debug color */
     display: flex;
     justify-content: left;
     font-weight: 400;
-    /* font-style: italic; */
-    /* margin-left: 30px; */
+    /* font-style: italic; */ /* Uncomment for italic text */
+    /* margin-left: 30px; */ /* Uncomment for additional indentation */
 }
 
-.pop-date{
+/* Date text styling */
+.pop-date {
     margin-left: 4px;
 }
 
-.pop-ID{
+/* Well ID styling */
+.pop-ID {
     font-weight: bold;
     font-style: normal;
 }
 
-.pop-date-spacer{
+/* Spacer for flexible layout */
+.pop-date-spacer {
     flex: 1;
 }
 
+/* ==========================================================================
+   Popup Close Button
+   ========================================================================== */
+
+/* Close button styling */
 .mapboxgl-popup-close-button {
     margin-right: 12px;
     margin-top: 8px;
     padding: 0px;
     width: 8px;
     height: 8px;
-    color: #898989;
+    color: #898989; /* Gray close button */
     justify-items: center;
-  }
+}
