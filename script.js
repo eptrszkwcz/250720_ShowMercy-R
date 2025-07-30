@@ -6,7 +6,7 @@ const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/ptrszkwcz/cmd0f8osq00cb01sq3isz3osg',
   center: [32.4, 1.3], // Uganda center coordinates
-  zoom: 6.75
+  zoom: 6.2
 }); 
 
 // Initialize empty GeoJSON data structure
