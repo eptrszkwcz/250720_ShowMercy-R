@@ -1,5 +1,5 @@
 // Mapbox GL JS Access Token
-mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNpdHVuOXpqMzAwMmEybnF2anZwbTd4aWcifQ.MF8M3qBg0AEp_-10FB4juw';
+mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNtOHMwbmJvdTA4ZnIya290M2hlbmswb2YifQ.qQZEM9FzU2J-_z0vYoSBeg';
 
 // Initialize the map
 const map = new mapboxgl.Map({
@@ -65,7 +65,7 @@ const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=
 fetch(sheetUrl)
   .then(res => res.text())
   .then(csv => {
-    console.log('Google Sheets data received, CSV length:', csv.length);
+    // console.log('Google Sheets data received, CSV length:', csv.length);
     
     // Parse CSV data
     const rows = csv.trim().split('\n');
@@ -121,15 +121,15 @@ fetch(sheetUrl)
       geojsonData.features.push(feature);
     }
     
-    console.log('Total features processed:', geojsonData.features.length);
-    console.log('Features to be added to map:', geojsonData.features.length);
+    // console.log('Total features processed:', geojsonData.features.length);
+    // console.log('Features to be added to map:', geojsonData.features.length);
 
     /**
      * Add map layers and interactions
      * This function sets up all the map layers including clusters, points, and hover effects
      */
     function addMapLayers() {
-      console.log('Adding map layers');
+      // console.log('Adding map layers');
       
       // 1. Add the GeoJSON source with clustering enabled
       if (!map.getSource('points')) {
@@ -403,14 +403,14 @@ fetch(sheetUrl)
     } // End of addMapLayers function
     
     // Initialize map layers after data is loaded
-    console.log('About to initialize map layers, map.isStyleLoaded():', map.isStyleLoaded());
+    // console.log('About to initialize map layers, map.isStyleLoaded():', map.isStyleLoaded());
     if (map.isStyleLoaded()) {
-      console.log('Map is ready, calling addMapLayers');
+      // console.log('Map is ready, calling addMapLayers');
       addMapLayers();
     } else {
-      console.log('Map not ready, waiting for load event');
+      // console.log('Map not ready, waiting for load event');
       map.once('load', () => {
-        console.log('Map loaded, calling addMapLayers');
+        // console.log('Map loaded, calling addMapLayers');
         addMapLayers();
       });
     }
