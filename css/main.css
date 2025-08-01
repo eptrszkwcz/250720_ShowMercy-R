@@ -184,7 +184,7 @@ body {
 /* Flag image container in popup */
 .pop-flag {
     margin-left: 16px; /* 16px minimum space from pop-country */
-    margin-right: 12px;
+    /* margin-right: 12px; */
     margin-bottom: 2px;
     flex-shrink: 0; /* Prevent flag from shrinking */
     display: flex; /* Ensure proper sizing */
@@ -226,15 +226,9 @@ body {
    Popup Close Button
    ========================================================================== */
 
-/* Close button styling */
+/* Close button styling - Hidden */
 .mapboxgl-popup-close-button {
-    margin-right: 12px;
-    margin-top: 8px;
-    padding: 0px;
-    width: 8px;
-    height: 8px;
-    color: #898989; /* Gray close button */
-    justify-items: center;
+    display: none !important; /* Hide the close button completely */
 }
 
 /* ==========================================================================
