@@ -428,6 +428,14 @@ fetch(sheetUrl)
         
           // 11. Click to expand clusters
           map.on('click', 'clusters', (e) => {
+            // Clear hover effects immediately when cluster is clicked
+            map.getSource('hover-clusters').setData({
+              type: 'FeatureCollection',
+              features: []
+            });
+            hoveredCluster = null;
+            map.getCanvas().style.cursor = '';
+            
             const feature = map.queryRenderedFeatures(e.point, { layers: ['clusters'] })[0];
             map.getSource('points').getClusterExpansionZoom(feature.properties.cluster_id, (err, zoom) => {
               if (err) return;
