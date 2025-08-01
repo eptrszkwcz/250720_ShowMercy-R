@@ -1,13 +1,77 @@
 // Mapbox GL JS Access Token
 mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNtOHMwbmJvdTA4ZnIya290M2hlbmswb2YifQ.qQZEM9FzU2J-_z0vYoSBeg';
 
+// Function to detect if device is mobile
+function isMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         window.innerWidth <= 580;
+}
+
 // Initialize the map
+const initialZoom = window.innerWidth <= 500 ? 5.2 : 6.2;
+// console.log('Screen width:', window.innerWidth + 'px');
+// console.log('Device type:', isMobile() ? 'Mobile' : 'Desktop');
+// console.log('Initial zoom level:', initialZoom);
+
 const map = new mapboxgl.Map({
   container: 'map',
   style: 'mapbox://styles/ptrszkwcz/cmd0f8osq00cb01sq3isz3osg',
-  center: [32.4, 1.3], // Uganda center coordinates
-  zoom: 6.2
+  center: [32.3, 1.3], // Uganda center coordinates
+  zoom: initialZoom,
+  scrollZoom: false, // Disable scroll zoom
+  dragPan: !isMobile(), // Disable pan on mobile initially
+  dragRotate: false, // Disable rotation
+  keyboard: false, // Disable keyboard navigation
+  doubleClickZoom: false, // Disable double-click zoom
+  touchZoomRotate: !isMobile() // Disable touch zoom/rotate on mobile initially
 }); 
+
+// Add zoom control buttons
+map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+// Mobile interaction handling
+if (isMobile()) {
+  let mapInteracted = false;
+  
+  // Add a click handler to enable interactions on first click
+  map.on('click', () => {
+    if (!mapInteracted) {
+      mapInteracted = true;
+      
+      // Enable pan and zoom
+      map.dragPan.enable();
+      map.touchZoomRotate.enable();
+      
+      // Show a subtle indicator that the map is now interactive
+      const mapContainer = map.getContainer();
+      mapContainer.style.cursor = 'grab';
+      
+      // Optional: Add a brief visual feedback
+      mapContainer.style.transition = 'opacity 0.3s';
+      mapContainer.style.opacity = '0.95';
+      setTimeout(() => {
+        mapContainer.style.opacity = '1';
+      }, 300);
+    }
+  });
+  
+  // Add a visual indicator that the map is clickable
+  const mapContainer = map.getContainer();
+  mapContainer.style.cursor = 'pointer';
+  mapContainer.title = 'Click to enable map navigation';
+}
+
+// Add search box to upper left corner
+map.addControl(
+  new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl,
+    placeholder: 'Search for a location...',
+    marker: false, // Don't add a marker when searching
+    position: 'top-left'
+  }),
+  'top-left'
+);
 
 // Initialize empty GeoJSON data structure
 let geojsonData = {
