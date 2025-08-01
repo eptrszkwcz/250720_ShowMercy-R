@@ -236,3 +236,26 @@ body {
     color: #898989; /* Gray close button */
     justify-items: center;
 }
+
+/* ==========================================================================
+   Mapbox Geocoder Search Box Customization
+   ========================================================================== */
+
+/* Custom styling for the Mapbox Geocoder search box */
+.mapboxgl-ctrl-geocoder {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+/* Reduce the height of the search input */
+.mapboxgl-ctrl-geocoder input {
+    height: 30px !important;
+    padding: 6px 6px 6px 36px !important;
+    font-size: 12px;
+}
+
+
+/* Ensure the search icon is properly positioned */
+.mapboxgl-ctrl-geocoder--icon {
+    top: 5px !important;
+}
