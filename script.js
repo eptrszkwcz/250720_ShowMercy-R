@@ -1,6 +1,7 @@
 // Mapbox GL JS Access Token
 mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNtOHMwbmJvdTA4ZnIya290M2hlbmswb2YifQ.qQZEM9FzU2J-_z0vYoSBeg';
 
+
 // Function to detect if device is mobile
 function isMobile() {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
@@ -72,6 +73,195 @@ map.addControl(
   }),
   'top-left'
 );
+
+// Custom search for well data
+function createWellSearch() {
+  console.log('Creating well search container...');
+  
+  // Create search container
+  const searchContainer = document.createElement('div');
+  searchContainer.className = 'well-search-container';
+  searchContainer.style.cssText = `
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 200px;
+    max-width: 300px;
+  `;
+
+  // Create search input
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Search wells by ID or Region...';
+  searchInput.style.cssText = `
+    width: 100%;
+    height: 40px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    box-sizing: border-box;
+  `;
+
+  // Create results container
+  const resultsContainer = document.createElement('div');
+  resultsContainer.className = 'well-search-results';
+  resultsContainer.style.cssText = `
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    z-index: 2;
+  `;
+
+  searchContainer.appendChild(searchInput);
+  searchContainer.appendChild(resultsContainer);
+
+  // Add to map
+  map.getContainer().appendChild(searchContainer);
+
+  // Search functionality
+  let searchTimeout;
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (query.length < 2) {
+      resultsContainer.style.display = 'none';
+      return;
+    }
+
+    searchTimeout = setTimeout(() => {
+      console.log('Searching for:', query);
+      console.log('Available features:', geojsonData.features.length);
+      
+      const results = geojsonData.features.filter(feature => {
+        const wellID = (feature.properties.wellID || '').toLowerCase();
+        const region = (feature.properties.region || '').toLowerCase();
+        return wellID.includes(query) || region.includes(query);
+      }); // Show all matching results
+
+      console.log('Search results found:', results.length);
+      displayResults(results, query);
+    }, 300);
+  });
+
+  function displayResults(results, query) {
+    resultsContainer.innerHTML = '';
+    
+    if (results.length === 0) {
+      resultsContainer.innerHTML = '<div style="padding: 8px; color: #666; font-size: 12px;">No matches found</div>';
+    } else {
+      results.forEach(feature => {
+        const resultItem = document.createElement('div');
+        resultItem.style.cssText = `
+          padding: 8px;
+          border-bottom: 1px solid #eee;
+          cursor: pointer;
+          font-size: 12px;
+          line-height: 1.2;
+        `;
+        
+        const wellID = feature.properties.wellID || 'No ID';
+        const region = feature.properties.region || 'Unknown Region';
+        
+        resultItem.innerHTML = `
+          <div style="font-weight: bold; color: #333;">${wellID}</div>
+          <div style="color: #666; font-size: 11px;">${region}</div>
+        `;
+        
+        resultItem.addEventListener('click', () => {
+          // Zoom to the point
+          map.flyTo({
+            center: feature.geometry.coordinates,
+            zoom: 15.5,
+            duration: 2000
+          });
+          
+          // Show popup
+          const html = `
+            <div class="pop-title">
+              <div class="pop-region">${region}</div>
+              <div class="pop-country">Uganda</div>
+              <div class="pop-spacer"></div>
+              <div class="pop-flag">
+                <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag"/>
+              </div>
+            </div>
+            <div class="pop-date-line">
+              <div class="pop-ID">${wellID}</div>
+            </div>
+            <div class="pop-date-line">
+              <div class="pop-completed">Completed</div>
+              <div class="pop-date">${feature.properties.date || 'Unknown'}</div>
+            </div>
+          `;
+          
+          new mapboxgl.Popup()
+            .setLngLat(feature.geometry.coordinates)
+            .setHTML(html)
+            .addTo(map);
+          
+          // Clear search
+          searchInput.value = '';
+          resultsContainer.style.display = 'none';
+        });
+        
+        resultItem.addEventListener('mouseenter', () => {
+          resultItem.style.backgroundColor = '#f0f0f0';
+        });
+        
+        resultItem.addEventListener('mouseleave', () => {
+          resultItem.style.backgroundColor = 'white';
+        });
+        
+        resultsContainer.appendChild(resultItem);
+      });
+    }
+    
+    resultsContainer.style.display = 'block';
+  }
+
+  // Close results when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchContainer.contains(e.target)) {
+      resultsContainer.style.display = 'none';
+    }
+  });
+
+  // Handle keyboard navigation
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      resultsContainer.style.display = 'none';
+      searchInput.blur();
+    }
+  });
+}
+
+// Initialize well search after data is loaded
+function initializeWellSearch() {
+  console.log('Initializing well search...');
+  console.log('Total features loaded:', geojsonData.features.length);
+  
+  if (geojsonData.features.length > 0) {
+    console.log('Creating well search box...');
+    createWellSearch();
+    console.log('Well search box created successfully');
+  } else {
+    console.log('No features found, skipping well search creation');
+  }
+}
 
 // Initialize empty GeoJSON data structure
 let geojsonData = {
@@ -183,6 +373,15 @@ fetch(sheetUrl)
       };
       
       geojsonData.features.push(feature);
+      
+      // Log first few entries for debugging
+      if (idCounter <= 5) {
+        console.log(`Well ${idCounter}:`, {
+          wellID: values[wellID],
+          region: values[regionIdx],
+          date: values[dateIdx]
+        });
+      }
     }
     
     // console.log('Total features processed:', geojsonData.features.length);
@@ -479,11 +678,13 @@ fetch(sheetUrl)
     if (map.isStyleLoaded()) {
       // console.log('Map is ready, calling addMapLayers');
       addMapLayers();
+      initializeWellSearch(); // Initialize well search after layers are added
     } else {
       // console.log('Map not ready, waiting for load event');
       map.once('load', () => {
         // console.log('Map loaded, calling addMapLayers');
         addMapLayers();
+        initializeWellSearch(); // Initialize well search after layers are added
       });
     }
     

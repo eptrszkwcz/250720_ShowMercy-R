@@ -235,6 +235,11 @@ body {
    Mapbox Geocoder Search Box Customization
    ========================================================================== */
 
+/* Hide the Mapbox Geocoder search box */
+.mapboxgl-ctrl-geocoder {
+    display: none !important;
+}
+
 /* Custom styling for the Mapbox Geocoder search box */
 .mapboxgl-ctrl-geocoder {
     min-width: 200px;
