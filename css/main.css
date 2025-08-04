@@ -126,12 +126,13 @@ body {
    Mapbox Popup Styling
    ========================================================================== */
 
-/* Main popup content container */
 .mapboxgl-popup-content {
     font: var(--font_default);
     padding: 15px;
     display: block; /* Changed from inline-block to block */
     width: fit-content; /* Size to fit all content */
+    /* min-width: 230px; */
+    /* max-width: 300px; */
     /* min-width: 300px; Minimum width */
     background: rgba(253,253,243,0.9); /* Light cream background with transparency */
     color: var(--sec_color);
@@ -155,7 +156,7 @@ body {
     line-height: 1; 
     margin-right: 15px;
     width: 100%; /* Ensure it takes full width */
-    min-width: 0; /* Allow shrinking */
+    /* min-width: 230px; Allow shrinking */
 }
 
 /* Region name in popup */
@@ -221,6 +222,23 @@ body {
 .pop-date-spacer {
     flex: 1;
 }
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+    border-bottom-color: rgba(253,253,243,0.9);
+    }
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+    border-top-color: rgba(253,253,243,0.9);
+    }
+.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+    border-right-color: rgba(253,253,243,0.9);
+    }
+.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+    border-left-color: rgba(253,253,243,0.9);
+      }
 
 /* ==========================================================================
    Popup Close Button
