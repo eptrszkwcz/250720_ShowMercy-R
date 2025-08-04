@@ -1,5 +1,6 @@
 // Mapbox GL JS Access Token
-mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNtOHMwbmJvdTA4ZnIya290M2hlbmswb2YifQ.qQZEM9FzU2J-_z0vYoSBeg';
+// mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNtOHMwbmJvdTA4ZnIya290M2hlbmswb2YifQ.qQZEM9FzU2J-_z0vYoSBeg';
+mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNpdHVuOXpqMzAwMmEybnF2anZwbTd4aWcifQ.MF8M3qBg0AEp_-10FB4juw';
 
 
 // Function to detect if device is mobile
@@ -10,9 +11,6 @@ function isMobile() {
 
 // Initialize the map
 const initialZoom = window.innerWidth <= 500 ? 5.2 : 6.2;
-// console.log('Screen width:', window.innerWidth + 'px');
-// console.log('Device type:', isMobile() ? 'Mobile' : 'Desktop');
-// console.log('Initial zoom level:', initialZoom);
 
 const map = new mapboxgl.Map({
   container: 'map',
@@ -76,8 +74,6 @@ map.addControl(
 
 // Custom search for well data
 function createWellSearch() {
-  console.log('Creating well search container...');
-  
   // Create search container
   const searchContainer = document.createElement('div');
   searchContainer.className = 'well-search-container';
@@ -143,16 +139,12 @@ function createWellSearch() {
     }
 
     searchTimeout = setTimeout(() => {
-      console.log('Searching for:', query);
-      console.log('Available features:', geojsonData.features.length);
-      
       const results = geojsonData.features.filter(feature => {
         const wellID = (feature.properties.wellID || '').toLowerCase();
         const region = (feature.properties.region || '').toLowerCase();
         return wellID.includes(query) || region.includes(query);
       }); // Show all matching results
 
-      console.log('Search results found:', results.length);
       displayResults(results, query);
     }, 300);
   });
@@ -182,6 +174,12 @@ function createWellSearch() {
         `;
         
         resultItem.addEventListener('click', () => {
+          // Close any existing popup
+          const existingPopup = document.querySelector('.mapboxgl-popup');
+          if (existingPopup) {
+            existingPopup.remove();
+          }
+          
           // Zoom to the point
           map.flyTo({
             center: feature.geometry.coordinates,
@@ -198,6 +196,13 @@ function createWellSearch() {
               <div class="pop-flag">
                 <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag"/>
               </div>
+            </div>
+            <div class="pop-image" style="display: none;">
+              <img src="https://res.cloudinary.com/durzkezk9/image/upload/v1754262159/${wellID}.jpg" 
+                   alt="Well Site Image" 
+                   onload="this.parentElement.style.display='block'"
+                   onerror="this.parentElement.style.display='none'"
+                   style="width: 100%; height: auto; margin: 8px 0; border-radius: 4px;"/>
             </div>
             <div class="pop-date-line">
               <div class="pop-ID">${wellID}</div>
@@ -251,15 +256,8 @@ function createWellSearch() {
 
 // Initialize well search after data is loaded
 function initializeWellSearch() {
-  console.log('Initializing well search...');
-  console.log('Total features loaded:', geojsonData.features.length);
-  
   if (geojsonData.features.length > 0) {
-    console.log('Creating well search box...');
     createWellSearch();
-    console.log('Well search box created successfully');
-  } else {
-    console.log('No features found, skipping well search creation');
   }
 }
 
@@ -374,14 +372,7 @@ fetch(sheetUrl)
       
       geojsonData.features.push(feature);
       
-      // Log first few entries for debugging
-      if (idCounter <= 5) {
-        console.log(`Well ${idCounter}:`, {
-          wellID: values[wellID],
-          region: values[regionIdx],
-          date: values[dateIdx]
-        });
-      }
+
     }
     
     // console.log('Total features processed:', geojsonData.features.length);
@@ -646,6 +637,7 @@ fetch(sheetUrl)
           map.on('click', 'points', (e) => {
             const props = e.features[0].properties;
             const coords = e.features[0].geometry.coordinates.slice();
+            
             const html = `
               <div class="pop-title">
                 <div class="pop-region">${props.region}</div>
@@ -654,6 +646,13 @@ fetch(sheetUrl)
                 <div class="pop-flag">
                   <img src="assets/images/flag_uganda_square.png" alt="Uganda Flag"/>
                 </div>
+              </div>
+              <div class="pop-image" style="display: none;">
+                <img src="https://res.cloudinary.com/durzkezk9/image/upload/v1754262159/${props.wellID}.jpg" 
+                     alt="Well Site Image" 
+                     onload="this.parentElement.style.display='block'"
+                     onerror="this.parentElement.style.display='none'"
+                     style="width: 100%; height: auto; margin: 8px 0; border-radius: 4px;"/>
               </div>
               <div class="pop-date-line">
                 <div class="pop-ID">${props.wellID}</div>
@@ -674,15 +673,11 @@ fetch(sheetUrl)
     } // End of addMapLayers function
     
     // Initialize map layers after data is loaded
-    // console.log('About to initialize map layers, map.isStyleLoaded():', map.isStyleLoaded());
     if (map.isStyleLoaded()) {
-      // console.log('Map is ready, calling addMapLayers');
       addMapLayers();
       initializeWellSearch(); // Initialize well search after layers are added
     } else {
-      // console.log('Map not ready, waiting for load event');
       map.once('load', () => {
-        // console.log('Map loaded, calling addMapLayers');
         addMapLayers();
         initializeWellSearch(); // Initialize well search after layers are added
       });
