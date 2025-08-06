@@ -28,36 +28,15 @@ const map = new mapboxgl.Map({
 // Add zoom control buttons
 map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-// Mobile interaction handling
+// Mobile interaction handling - enable immediately for mobile
 if (isMobile()) {
-  let mapInteracted = false;
+  // Enable pan and zoom immediately on mobile
+  map.dragPan.enable();
+  map.touchZoomRotate.enable();
   
-  // Add a click handler to enable interactions on first click
-  map.on('click', () => {
-    if (!mapInteracted) {
-      mapInteracted = true;
-      
-      // Enable pan and zoom
-      map.dragPan.enable();
-      map.touchZoomRotate.enable();
-      
-      // Show a subtle indicator that the map is now interactive
-      const mapContainer = map.getContainer();
-      mapContainer.style.cursor = 'grab';
-      
-      // Optional: Add a brief visual feedback
-      mapContainer.style.transition = 'opacity 0.3s';
-      mapContainer.style.opacity = '0.95';
-      setTimeout(() => {
-        mapContainer.style.opacity = '1';
-      }, 300);
-    }
-  });
-  
-  // Add a visual indicator that the map is clickable
+  // Set cursor to grab to indicate map is interactive
   const mapContainer = map.getContainer();
-  mapContainer.style.cursor = 'pointer';
-  mapContainer.title = 'Click to enable map navigation';
+  mapContainer.style.cursor = 'grab';
 }
 
 // Add search box to upper left corner
