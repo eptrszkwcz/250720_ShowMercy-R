@@ -1,5 +1,4 @@
 // Mapbox GL JS Access Token
-// mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNtOHMwbmJvdTA4ZnIya290M2hlbmswb2YifQ.qQZEM9FzU2J-_z0vYoSBeg';
 mapboxgl.accessToken = 'pk.eyJ1IjoicHRyc3prd2N6IiwiYSI6ImNpdHVuOXpqMzAwMmEybnF2anZwbTd4aWcifQ.MF8M3qBg0AEp_-10FB4juw';
 
 
@@ -177,7 +176,7 @@ function createWellSearch() {
               </div>
             </div>
             <div class="pop-image" style="display: none;">
-              <img src="https://res.cloudinary.com/durzkezk9/image/upload/v1754262159/${wellID}.jpg" 
+              <img src="https://res.cloudinary.com/dtishbmqc/image/upload/v1754510427/${wellID}.jpg" 
                    alt="Well Site Image" 
                    onload="this.parentElement.style.display='block'"
                    onerror="this.parentElement.style.display='none'"
@@ -627,7 +626,7 @@ fetch(sheetUrl)
                 </div>
               </div>
               <div class="pop-image" style="display: none;">
-                <img src="https://res.cloudinary.com/durzkezk9/image/upload/v1754262159/${props.wellID}.jpg" 
+                <img src="https://res.cloudinary.com/dtishbmqc/image/upload/v1754510427/${props.wellID}.jpg" 
                      alt="Well Site Image" 
                      onload="this.parentElement.style.display='block'"
                      onerror="this.parentElement.style.display='none'"
